@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tikz_qrcode"
+authors = [{ name = "Kurt Böhm", email = "kurbo96@gmail.com" }]
+version = "1.0.0"
+description = "TikZ QR code generation with contiguous areas"
+requires-python = ">=3.11"
+dependencies = ["pydantic", "qrcode"]
+
+[project.scripts]
+tikz_qrcode = "tikz_qrcode:run"
