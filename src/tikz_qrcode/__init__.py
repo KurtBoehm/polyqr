@@ -1,205 +1,128 @@
 from argparse import ArgumentParser
-from collections import deque
-from dataclasses import dataclass
-from typing import final
+from collections import Counter, deque
+from typing import cast, final
 
 import qrcode
-from pydantic import BaseModel, TypeAdapter
 
-# A QR code square is identified by its (row, column) coordinates.
+# A 2D grid point at integer coordinates (row, column).
 Point = tuple[int, int]
+Edge = tuple[Point, Point]
 
 
-@dataclass(frozen=True)
-class Edge:
-    """Undirected edge of a polygon that surrounds a black region."""
-
-    p1: Point
-    p2: Point
-    # the QR code square the edge belongs to
-    square: Point
+def normalized_edge(p: Point, q: Point) -> Edge:
+    """Canonical representation of an undirected edge with sorted vertices."""
+    return (p, q) if p <= q else (q, p)
 
 
-def manhattan_distance(e0: Edge, e1: Edge) -> int:
-    """Manhattan distance between the squares of two edges."""
-    return abs(e0.square[0] - e1.square[0]) + abs(e0.square[1] - e1.square[1])
-
-
-def sign(x: int) -> int:
-    """-1, 0 or +1 depending on the sign of `x`."""
-    if x < 0:
-        return -1
-    if x > 0:
-        return 1
-    return 0
-
-
-def collinear(p1: Point, p2: Point, p3: Point) -> bool:
-    """True if and only if p1→p2 and p2→p3 are collinear."""
-    return all(sign(p3[i] - p2[i]) == sign(p2[i] - p1[i]) for i in (0, 1))
+def collinear(a: Point, b: Point, c: Point) -> bool:
+    """Whether three grid points are collinear, i.e. share the same row or column."""
+    return (a[0] == b[0] == c[0]) or (a[1] == b[1] == c[1])
 
 
 @final
 class QrCodePainter:
     """
     Convert a QR code into a TikZ picture made of polygon outlines.
-    Contiguous black squares are merged into a single polygon.
+    Contiguous black areas are merged into polygons.
     """
 
     def __init__(self, msg: str):
-        # Generate the boolean matrix that represents the QR code.
+        # Generate the Boolean matrix that represents the QR code.
         qr = qrcode.QRCode()
         qr.add_data(msg)
         qr.make()
 
-        self.square_num = qr.modules_count
-        self.squares = TypeAdapter(list[list[bool]]).validate_python(qr.modules)
+        self.n = qr.modules_count
+        assert all(all(isinstance(v, bool) for v in row) for row in qr.modules)
+        self.squares = cast(list[list[bool]], qr.modules)
 
-        # 0: not visited. >0: component index.
-        self.indexed_squares = [[0 for _ in row] for row in self.squares]
-
-        # Store a list of its outer point chains (forming a polygon) for each component.
         self.point_chains: list[list[list[Point]]] = []
+        self._extract_polygons()
 
-        # Flood-fill each black region and collect its border edges.
-        index: int = 1
-        for i in range(len(self.squares)):
-            for j in range(len(self.squares[i])):
-                # Skip white and previously visited black squares
-                if not self.squares[i][j] or self.indexed_squares[i][j] != 0:
+    def _extract_polygons(self) -> None:
+        """Identify connected module components and construct simplified boundaries."""
+
+        def neighbors(r: int, c: int):
+            for dr, dc in ((-1, 0), (0, -1), (0, 1), (1, 0)):
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < self.n and 0 <= nc < self.n:
+                    yield nr, nc
+
+        visited = [[False] * self.n for _ in range(self.n)]
+
+        for r in range(self.n):
+            for c in range(self.n):
+                if not self.squares[r][c] or visited[r][c]:
                     continue
 
-                # BFS queue for the current component
-                queue: deque[Point] = deque([(i, j)])
-                # Edges for the current component
-                inner_edges: list[Edge] = []
+                # Flood-fill to collect all modules in this component.
+                queue: deque[Point] = deque([(r, c)])
+                visited[r][c] = True
+                edge_counts: Counter[Edge] = Counter()
+
                 while queue:
-                    row, col = queue.popleft()
-                    if (
-                        not self.squares[row][col]
-                        or self.indexed_squares[row][col] != 0
-                    ):
-                        continue
+                    cr, cc = queue.popleft()
 
-                    # Mark the square as belonging to the current component
-                    self.indexed_squares[row][col] = index
+                    # Count each outer edge of the module.
+                    p00, p01 = (cr, cc), (cr, cc + 1)
+                    p10, p11 = (cr + 1, cc), (cr + 1, cc + 1)
+                    for p, q in ((p00, p01), (p00, p10), (p01, p11), (p10, p11)):
+                        edge_counts[normalized_edge(p, q)] += 1
 
-                    # Examine the four orthogonal neighbours.
-                    for k, l in (
-                        (row - 1, col),
-                        (row, col - 1),
-                        (row, col + 1),
-                        (row + 1, col),
-                    ):
-                        inside = 0 <= k < self.square_num and 0 <= l < self.square_num
-                        if inside:
-                            queue.append((k, l))
+                    # Add unvisited neighbours to the queue and mark them as visited.
+                    for nr, nc in neighbors(cr, cc):
+                        if self.squares[nr][nc] and not visited[nr][nc]:
+                            visited[nr][nc] = True
+                            queue.append((nr, nc))
 
-                        # Neighbour outside the matrix or white → this side is a border.
-                        if not inside or not self.squares[k][l]:
-                            # top
-                            if k == row - 1:
-                                inner_edges.append(
-                                    Edge((row, col), (row, col + 1), (row, col))
-                                )
-                            # left
-                            if l == col - 1:
-                                inner_edges.append(
-                                    Edge((row, col), (row + 1, col), (row, col))
-                                )
-                            # right
-                            if l == col + 1:
-                                inner_edges.append(
-                                    Edge((row, col + 1), (row + 1, col + 1), (row, col))
-                                )
-                            # bottom
-                            if k == row + 1:
-                                inner_edges.append(
-                                    Edge((row + 1, col), (row + 1, col + 1), (row, col))
-                                )
+                # Edges used exactly once form the outer boundary (including holes).
+                boundary_edges = {e for e, cnt in edge_counts.items() if cnt == 1}
+                assert boundary_edges
 
-                # Stitch border edges into closed chains (polygons).
-                inner_point_chains: list[list[Point]] = []
-                while inner_edges:
-                    # Start a new chain with any remaining edge
-                    edge = inner_edges.pop(0)
-                    chain: list[Point] = [edge.p1, edge.p2]
+                # Build the unordered adjacency list for the boundary graph.
+                adj: dict[Point, set[Point]] = {}
+                for p, q in boundary_edges:
+                    adj.setdefault(p, set()).add(q)
+                    adj.setdefault(q, set()).add(p)
 
+                edges_left = set(boundary_edges)
+                chains: list[list[Point]] = []
+
+                # Find and simplify cycles.
+                while edges_left:
+                    start, _ = next(iter(edges_left))
+                    prev: Point | None = None
+                    cur = start
+                    chain = [cur]
+
+                    # Find the cycle.
                     while True:
-                        # current chain endpoint
-                        end = chain[-1]
                         found = False
-                        cycled = False
-
-                        # Prefer an edge to a neighbouring square.
-                        for k in range(len(inner_edges)):
-                            e = inner_edges[k]
-                            # Squares must be neighbours (Manhattan distance ≤ 1)
-                            if manhattan_distance(edge, e) > 1:
-                                continue
-
-                            # `e` must share a vertex with the chain end
-                            new_end = (
-                                e.p2 if e.p1 == end else e.p1 if e.p2 == end else None
-                            )
-                            if new_end is None:
-                                continue
-
-                            inner_edges.pop(k)
-                            found = True
-
-                            if new_end == chain[0]:
-                                # closed loop
-                                cycled = True
-                            else:
-                                chain.append(new_end)
-                                edge = e
-                            break
-
-                        if cycled:
-                            break
-                        if found:
-                            continue
-
-                        # No neighbour found: Fall back to any touching edge
-                        for k in range(len(inner_edges)):
-                            e = inner_edges[k]
-
-                            new_end = (
-                                e.p2 if e.p1 == end else e.p1 if e.p2 == end else None
-                            )
-                            if new_end is None:
-                                continue
-
-                            inner_edges.pop(k)
-                            found = True
-
-                            if new_end == chain[0]:
-                                cycled = True
+                        for v in adj[cur]:
+                            e = normalized_edge(cur, v)
+                            if e in edges_left and v != prev:
+                                edges_left.remove(e)
+                                prev, cur = cur, v
+                                found = True
                                 break
-
-                            chain.append(new_end)
-                            edge = e
-                            break
-
                         assert found
-                        if cycled:
+                        if cur == start:
+                            # Cycle closed.
                             break
+                        chain.append(cur)
 
-                    # Remove collinear points.
-                    k = 0
-                    while k < len(chain):
-                        p0, p1, p2 = chain[k - 1], chain[k], chain[(k + 1) % len(chain)]
+                    # Simplify the cycle by removing collinear vertices.
+                    i = 0
+                    while i < len(chain):
+                        p0, p1, p2 = chain[i - 1], chain[i], chain[(i + 1) % len(chain)]
                         if collinear(p0, p1, p2):
-                            chain.pop(k)
+                            del chain[i]
                         else:
-                            k += 1
+                            i += 1
 
-                    inner_point_chains.append(chain)
+                    chains.append(chain)
 
-                # Store the polygon for this component
-                self.point_chains.append(inner_point_chains)
-                index += 1
+                self.point_chains.append(chains)
 
     def latex(self, size: str, style: str) -> str:
         """Produce TikZ code that draws the collected polygons."""
@@ -209,8 +132,7 @@ class QrCodePainter:
         ]
 
         for chains in self.point_chains:
-            # Each chain becomes a closed path
-            # TikZ uses (x, y) where x = column, y = -row.
+            # Each chain becomes a closed path.
             chain_str = " ".join(
                 " -- ".join(f"({c}, {-r})" for r, c in chain) + " -- cycle"
                 for chain in chains
@@ -221,16 +143,10 @@ class QrCodePainter:
         return "\n".join(lines)
 
 
-class Args(BaseModel):
-    size: str
-    style: str
-    msg: str
-
-
 def run() -> None:
     parser = ArgumentParser()
     parser.add_argument("size", help="Edge length of one QR code square")
     parser.add_argument("style", help="TikZ style options for each polygon")
     parser.add_argument("msg", help="Message to encode")
-    args = Args.model_validate(vars(parser.parse_args()))
+    args = parser.parse_args()
     print(QrCodePainter(args.msg).latex(args.size, args.style))
