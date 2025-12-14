@@ -10,5 +10,8 @@ description = "TikZ QR code generation with contiguous areas"
 requires-python = ">=3.11"
 dependencies = ["pydantic", "qrcode"]
 
+[project.optional-dependencies]
+dev = ["numpy", "pytest", "PyMuPDF"]
+
 [project.scripts]
 tikz_qrcode = "tikz_qrcode:run"
