@@ -136,7 +136,7 @@ class QrCodePainter:
 
                 self.point_chains.append(chains)
 
-    def latex(self, size: str, style: str) -> str:
+    def tikz(self, *, size: str, style: str) -> str:
         """Produce TikZ code that draws the collected polygons."""
         lines = [
             f"\\begin{{tikzpicture}}[x={size},y={size},"
@@ -193,20 +193,15 @@ class QrCodePainter:
         path = "".join(self._generate_svg_polygons(relative=True))
         return '<path fill-rule="evenodd" d="' + path + '"/>'
 
-    def as_svg(self, use_paths: bool = False) -> str:
-        return _wrap_svg(
-            self.n, "".join(self.svg_paths) if use_paths else self.svg_path
-        )
-
     @property
     def svg(self) -> str:
-        return self.as_svg()
+        return _wrap_svg(self.n, self.svg_path)
 
 
-def run() -> None:
+def run_tikz() -> None:
     parser = ArgumentParser()
     parser.add_argument("size", help="Edge length of one QR code square")
     parser.add_argument("style", help="TikZ style options for each polygon")
     parser.add_argument("msg", help="Message to encode")
     args = parser.parse_args()
-    print(QrCodePainter(args.msg).latex(args.size, args.style))
+    print(QrCodePainter(args.msg).tikz(size=args.size, style=args.style))

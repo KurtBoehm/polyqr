@@ -3,15 +3,35 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tikz_qrcode"
-authors = [{ name = "Kurt Böhm", email = "kurbo96@gmail.com" }]
+name = "polyqr"
+description = "QR Codes as Polygons (TikZ/SVG)"
 version = "1.0.0"
-description = "TikZ QR code generation with contiguous areas"
+readme = "ReadMe.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["License"]
+authors = [{ name = "Kurt Böhm", email = "kurbo96@gmail.com" }]
 dependencies = ["qrcode"]
+keywords = ["svg", "drawing", "vector", "tikz", "latex", "qr-code"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Text Processing :: Markup :: LaTeX",
+]
+
+[project.urls]
+Repository = "https://github.com/KurtBoehm/polyqr"
 
 [project.optional-dependencies]
 dev = ["numpy", "cairosvg", "pillow", "pytest", "PyMuPDF"]
 
 [project.scripts]
-tikz_qrcode = "tikz_qrcode:run"
+polyqr_tikz = "polyqr:run_tikz"
+
+[tool.pytest]
+testpaths = ["tests"]
