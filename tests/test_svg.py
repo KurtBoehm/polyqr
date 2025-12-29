@@ -6,7 +6,7 @@ import pytest
 import qrcode
 from PIL import Image
 
-from tikz_qrcode import QrCodePainter
+from polyqr import QrCodePainter
 
 from .defs import test_messages
 
@@ -24,13 +24,10 @@ def svg_to_mask(svg_bytes: str, n: int):
 
 
 @pytest.mark.parametrize("msg", test_messages)
-def test_rendered_tikz(msg: str) -> None:
+def test_rendered_svg(msg: str) -> None:
     """
-    Test that the code produced by :meth:`QrCodePainter.tikz`, when rendered using
-    pdfLaTeX and rasterized PyMuPDF, is equivalent to the output of
-    :class:`qrcode.QRCode`.
-
-    This test requires a working LaTeX installation with pdflatex and TikZ.
+    Test that the SVG document produced by :meth:`QrCodePainter.svg`, when rasterized
+    using `cairosvg`, is equivalent to the output of :class:`qrcode.QRCode`.
     """
 
     # Reference matrix (True = black)
@@ -39,7 +36,7 @@ def test_rendered_tikz(msg: str) -> None:
     qr.make()
     ref_matrix = np.array(qr.modules, dtype=bool)
 
-    # Produce TikZ for the same message with an arbitrary module size.
+    # Produce the SVG document for the same message.
     painter = QrCodePainter(msg)
     raster = svg_to_mask(painter.svg, painter.n)
 

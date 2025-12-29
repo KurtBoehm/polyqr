@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import qrcode
 
-from tikz_qrcode import QrCodePainter
+from polyqr import QrCodePainter
 
 from .defs import test_messages
 
