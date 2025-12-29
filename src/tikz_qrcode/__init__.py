@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from collections import Counter, deque
+from collections.abc import Iterable
 from typing import cast, final
 
 import qrcode
@@ -19,6 +20,15 @@ def collinear(a: Point, b: Point, c: Point) -> bool:
     return (a[0] == b[0] == c[0]) or (a[1] == b[1] == c[1])
 
 
+def _wrap_svg(n: int, content: str):
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" '
+        + f'xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {n} {n}">'
+        + content
+        + "</svg>"
+    )
+
+
 @final
 class QrCodePainter:
     """
@@ -26,7 +36,7 @@ class QrCodePainter:
     Contiguous black areas are merged into polygons.
     """
 
-    def __init__(self, msg: str):
+    def __init__(self, msg: str) -> None:
         # Generate the Boolean matrix that represents the QR code.
         qr = qrcode.QRCode()
         qr.add_data(msg)
@@ -34,15 +44,17 @@ class QrCodePainter:
 
         self.n = qr.modules_count
         assert all(all(isinstance(v, bool) for v in row) for row in qr.modules)
-        self.squares = cast(list[list[bool]], qr.modules)
+        self.modules = cast(list[list[bool]], qr.modules)
 
+        # each list-of-list contained herein is a list of point chains
+        # that need to be drawn as one composite path using the even-odd rule
         self.point_chains: list[list[list[Point]]] = []
         self._extract_polygons()
 
     def _extract_polygons(self) -> None:
         """Identify connected module components and construct simplified boundaries."""
 
-        def neighbors(r: int, c: int):
+        def neighbors(r: int, c: int) -> Iterable[tuple[int, int]]:
             for dr, dc in ((-1, 0), (0, -1), (0, 1), (1, 0)):
                 nr, nc = r + dr, c + dc
                 if 0 <= nr < self.n and 0 <= nc < self.n:
@@ -52,7 +64,7 @@ class QrCodePainter:
 
         for r in range(self.n):
             for c in range(self.n):
-                if not self.squares[r][c] or visited[r][c]:
+                if not self.modules[r][c] or visited[r][c]:
                     continue
 
                 # Flood-fill to collect all modules in this component.
@@ -69,9 +81,9 @@ class QrCodePainter:
                     for p, q in ((p00, p01), (p00, p10), (p01, p11), (p10, p11)):
                         edge_counts[normalized_edge(p, q)] += 1
 
-                    # Add unvisited neighbours to the queue and mark them as visited.
+                    # Add unvisited neighbors to the queue and mark them as visited.
                     for nr, nc in neighbors(cr, cc):
-                        if self.squares[nr][nc] and not visited[nr][nc]:
+                        if self.modules[nr][nc] and not visited[nr][nc]:
                             visited[nr][nc] = True
                             queue.append((nr, nc))
 
@@ -141,6 +153,54 @@ class QrCodePainter:
 
         lines.append("\\end{tikzpicture}%")
         return "\n".join(lines)
+
+    def _generate_svg_polygons(self, *, relative: bool) -> Iterable[str]:
+        def move(p: Point | None, q: Point):
+            sq = f"M{q[0]} {q[1]}"
+            if p is None:
+                return sq
+            return min(sq, f"m{q[0] - p[0]} {q[1] - p[1]}", key=len)
+
+        def line(lower: str, src: int, dst: int) -> str:
+            sa, sd = str(dst), str(dst - src)
+            return lower.upper() + sa if len(sa) <= len(sd) else lower + sd
+
+        prev: Point | None = None
+        for chains in self.point_chains:
+            s = ""
+            for chain in chains:
+                # Each chain becomes a closed path.
+                p0 = chain[0]
+                s += move(prev, chain[0])
+                xp, yp = p0
+                for x, y in chain[1:]:
+                    dx, dy = x - xp, y - yp
+                    assert dx == 0 or dy == 0, f"{dx} {dy}"
+                    s += line("h", xp, x) if dy == 0 else line("v", yp, y)
+                    xp, yp = x, y
+                s += "z"
+                if relative:
+                    prev = p0
+            yield s
+
+    @property
+    def svg_paths(self) -> Iterable[str]:
+        for poly in self._generate_svg_polygons(relative=False):
+            yield '<path fill-rule="evenodd" d="' + poly + '"/>'
+
+    @property
+    def svg_path(self) -> str:
+        path = "".join(self._generate_svg_polygons(relative=True))
+        return '<path fill-rule="evenodd" d="' + path + '"/>'
+
+    def as_svg(self, use_paths: bool = False) -> str:
+        return _wrap_svg(
+            self.n, "".join(self.svg_paths) if use_paths else self.svg_path
+        )
+
+    @property
+    def svg(self) -> str:
+        return self.as_svg()
 
 
 def run() -> None:

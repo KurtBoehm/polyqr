@@ -8,7 +8,6 @@ import qrcode
 
 from tikz_qrcode import QrCodePainter
 
-
 # Minimal LaTeX wrapper used to compile the TikZ snippet into a PDF.
 _LATEX_TEMPLATE = """
 \\documentclass[tikz]{{standalone}}

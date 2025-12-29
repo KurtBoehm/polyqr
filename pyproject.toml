@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dependencies = ["qrcode"]
 
 [project.optional-dependencies]
-dev = ["numpy", "pytest", "PyMuPDF"]
+dev = ["numpy", "cairosvg", "pillow", "pytest", "PyMuPDF"]
 
 [project.scripts]
 tikz_qrcode = "tikz_qrcode:run"
