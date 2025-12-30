@@ -1,14 +1,14 @@
 # 🧩 PolyQR: QR Codes as Polygons
 
 PolyQR is a small library that turns a message into a QR code where each contiguous black region is drawn as **one merged polygon**, not a grid of tiny squares.
-This eliminates the **hideous hairline gaps** between modules that appear with naïve approaches (see [TikZ Output](#️-tikz-output) for an example) and also minimizes the number of points per polygon to keep the output compact.
+This eliminates the **hideous hairline gaps** between modules that appear with naïve approaches (an example is shown later) and also minimizes the number of points per polygon to keep the output compact.
 
 PolyQR can generate:
 
 - **TikZ** code with full styling support (e.g. rounded corners)
 - **SVG** paths that are fully minimized to save space
 
-The [`tests`](tests) directory contains **`pytest`-based tests** for both TikZ and SVG.
+The [`tests`](https://github.com/KurtBoehm/polyqr/blob/main/tests) directory contains **`pytest`-based tests** for both TikZ and SVG.
 
 ## 🖼️ TikZ Output
 
@@ -29,11 +29,11 @@ This prints a `tikzpicture` environment of the following form to `stdout`:
 Because each connected component is rendered as a single polygon, TikZ styles such as `rounded corners` apply only to the outer boundary of each contiguous region.
 This also eliminates visible gaps between modules, which you can see when comparing to a basic version that draws each module as a separate rectangle:
 
-| Basic                              | PolyQR                               | PolyQR with rounded corners                          |
-| ---------------------------------- | ------------------------------------ | ---------------------------------------------------- |
-| ![Basic TikZ](docs/tikz-basic.png) | ![PolyQR TikZ](docs/tikz-polyqr.png) | ![Rounded PolyQR TikZ](docs/tikz-polyqr-rounded.png) |
+| Basic                                                                                      | PolyQR                                                                                       | PolyQR with rounded corners                                                                                  |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| ![Basic TikZ](https://raw.githubusercontent.com/KurtBoehm/polyqr/main/docs/tikz-basic.png) | ![PolyQR TikZ](https://raw.githubusercontent.com/KurtBoehm/polyqr/main/docs/tikz-polyqr.png) | ![Rounded PolyQR TikZ](https://raw.githubusercontent.com/KurtBoehm/polyqr/main/docs/tikz-polyqr-rounded.png) |
 
-The LaTeX file used to generate these examples is at [`docs/tikz.tex`](docs/tikz.tex).
+The LaTeX file used to generate these examples is at [`docs/tikz.tex`](https://github.com/KurtBoehm/polyqr/blob/main/docs/tikz.tex).
 
 You can also generate TikZ code directly from Python:
 
@@ -76,8 +76,8 @@ for path in painter.svg_paths:
 
 For the message `https://github.com/KurtBoehm/polyqr`:
 
-- `SvgPathImage` output: ≈ **6.4 kB** ([`docs/svg-qrcode.svg`](docs/svg-qrcode.svg))
-- `QrCodePainter.svg` output: ≈ **1.7 kB** ([`docs/svg-polyqr.svg`](docs/svg-polyqr.svg))
+- `SvgPathImage` output: ≈ **6.4 kB** ([`docs/svg-qrcode.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-qrcode.svg))
+- `QrCodePainter.svg` output: ≈ **1.7 kB** ([`docs/svg-polyqr.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-polyqr.svg))
 
 That is a **size reduction of more than 70%** with identical geometry.
 
