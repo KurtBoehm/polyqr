@@ -29,6 +29,26 @@ def _wrap_svg(n: int, content: str):
     )
 
 
+def connected_components(adj: dict[Point, set[Point]]):
+    unvisited: set[Point] = set(adj.keys())
+    components: list[set[Point]] = []
+
+    while unvisited:
+        start = unvisited.pop()
+        component: set[Point] = {start}
+        queue: deque[Point] = deque([start])
+        while queue:
+            u = queue.popleft()
+            for v in adj[u]:
+                if v not in component:
+                    component.add(v)
+                    unvisited.discard(v)
+                    queue.append(v)
+        components.append(component)
+
+    return components
+
+
 @final
 class QrCodePainter:
     """
@@ -67,7 +87,7 @@ class QrCodePainter:
                 if not self.modules[r][c] or visited[r][c]:
                     continue
 
-                # Flood-fill to collect all modules in this component.
+                # Flood-fill to collect all modules in this connected component.
                 queue: deque[Point] = deque([(r, c)])
                 visited[r][c] = True
                 edge_counts: Counter[Edge] = Counter()
@@ -75,7 +95,7 @@ class QrCodePainter:
                 while queue:
                     cr, cc = queue.popleft()
 
-                    # Count each outer edge of the module.
+                    # Count each outer edge of this module.
                     p00, p01 = (cr, cc), (cr, cc + 1)
                     p10, p11 = (cr + 1, cc), (cr + 1, cc + 1)
                     for p, q in ((p00, p01), (p00, p10), (p01, p11), (p10, p11)):
@@ -97,31 +117,82 @@ class QrCodePainter:
                     adj.setdefault(p, set()).add(q)
                     adj.setdefault(q, set()).add(p)
 
-                edges_left = set(boundary_edges)
+                # Find connected components of the boundary graph and sort them
+                # by decreasing size (largest first).
+                components = connected_components(adj)
+                components.sort(key=len, reverse=True)
+
+                # Find the best cycle for each component (largest to smallest).
                 chains: list[list[Point]] = []
-
-                # Find and simplify cycles.
-                while edges_left:
-                    start, _ = next(iter(edges_left))
-                    prev: Point | None = None
-                    cur = start
-                    chain = [cur]
-
-                    # Find the cycle.
+                for component in components:
+                    # Construct the initial cycle with a preference for edges
+                    # that are not collinear with the preceding edge (if there is one).
+                    # This ensures “wall-hugging” behaviour when entering a hole,
+                    # which leads to more visually pleasing results when rounding
+                    # corners.
+                    init = next(iter(component))
+                    chain: list[Point] = [init]
+                    prec: Point | None = None
+                    edges_left = boundary_edges.copy()
                     while True:
-                        found = False
-                        for v in adj[cur]:
-                            e = normalized_edge(cur, v)
-                            if e in edges_left and v != prev:
-                                edges_left.remove(e)
-                                prev, cur = cur, v
-                                found = True
-                                break
-                        assert found
-                        if cur == start:
-                            # Cycle closed.
+                        curr = chain[-1]
+                        if (e := normalized_edge(curr, init)) in edges_left:
+                            # There is an unused edge to the beginning of the cycle.
+                            edges_left.remove(e)
                             break
-                        chain.append(cur)
+                        successors = [
+                            v
+                            for v in adj[curr]
+                            if normalized_edge(curr, v) in edges_left
+                        ]
+                        if prec is not None:
+                            # Prefer turns, i.e. edges which are not collinear.
+                            pv = prec
+                            successors.sort(key=lambda sv: collinear(pv, curr, sv))
+                        succ = successors[0]
+
+                        chain.append(succ)
+                        edges_left.remove(normalized_edge(curr, succ))
+                        prec = curr
+
+                    while len(set(chain)) < len(component):
+                        # The cycle does not cover the entire connected component.
+                        # Extend the cycle by constructing a new cycle that uses
+                        # edges that are not included in the cycle already, i.e. those
+                        # in `edges_left`, if available (still preferring turns).
+                        # If there is no such edge, use the same successor used before.
+                        new_chain: list[Point] = [init]
+                        prec = None
+                        best_idx = 1
+                        while True:
+                            curr = new_chain[-1]
+                            cadj_curr = adj[curr]
+                            successors = [
+                                v
+                                for v in cadj_curr
+                                if normalized_edge(curr, v) in edges_left
+                            ]
+                            if len(successors) == 0:
+                                # There are no unused outgoing edges and the previous
+                                # chain has been exhausted.
+                                if best_idx == len(chain):
+                                    break
+                                # Use the next edge from the previous chain.
+                                succ = chain[best_idx]
+                                new_chain.append(succ)
+                                prec = curr
+                                best_idx += 1
+                                continue
+                            if prec is not None:
+                                # Still prefer turns.
+                                pv = prec
+                                successors.sort(key=lambda sv: collinear(pv, curr, sv))
+                            succ = successors[0]
+
+                            new_chain.append(succ)
+                            edges_left.remove(normalized_edge(curr, succ))
+                            prec = curr
+                        chain = new_chain
 
                     # Simplify the cycle by removing collinear vertices.
                     i = 0
@@ -134,6 +205,7 @@ class QrCodePainter:
 
                     chains.append(chain)
 
+                # Store chains for this connected module region.
                 self.point_chains.append(chains)
 
     def tikz(self, *, size: str, style: str) -> str:
