@@ -8,7 +8,7 @@ description = "QR Codes as Polygons (TikZ/SVG)"
 version = "1.0.0"
 readme = "ReadMe.md"
 requires-python = ">=3.11"
-license = "MIT"
+license = "MPL-2.0"
 license-files = ["License"]
 authors = [{ name = "Kurt Böhm", email = "kurbo96@gmail.com" }]
 dependencies = ["qrcode"]

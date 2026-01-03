@@ -121,3 +121,7 @@ To keep test times reasonable, the `dev` dependencies include `pytest-xdist`, so
 ```sh
 pytest -n 8  # or any other number of workers
 ```
+
+## 📜 License
+
+This library is licensed under the terms of the Mozilla Public License 2.0, provided in [`License`](https://github.com/KurtBoehm/polyqr/blob/main/License).
