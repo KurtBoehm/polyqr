@@ -1,7 +1,7 @@
 # 🧩 PolyQR: QR Codes as Polygons
 
 PolyQR is a small library that turns a message into a QR code where each contiguous black region is drawn as **one merged polygon**, not a grid of tiny squares.
-This eliminates the **hideous hairline gaps** between modules that appear with naïve approaches (an example is shown later) and also minimizes the number of points per polygon to keep the output compact.
+This **eliminates hideous hairline gaps** between modules that appear with naive approaches (an example is shown later) and also **minimizes the number of points per polygon** to keep the output compact.
 
 PolyQR can generate:
 
@@ -10,9 +10,19 @@ PolyQR can generate:
 
 The `pytest`-based **test suite** with **100% coverage** (for both TikZ and SVG) is defined in the [`tests` directory](https://github.com/KurtBoehm/polyqr/blob/main/tests).
 
+[![Tests with 100% coverage](https://github.com/KurtBoehm/polyqr/actions/workflows/test.yml/badge.svg)](https://github.com/KurtBoehm/polyqr/actions/workflows/test.yml)
+
+## 📦 Installation
+
+This package is available on PyPI and can be installed with `pip`:
+
+```sh
+pip install polyqr
+```
+
 ## 🖼️ TikZ Output
 
-PolyQR provides the command-line tool `polyqr_tikz`, which can be called like this:
+PolyQR provides the command-line tool `polyqr_tikz`, which can be called as follows:
 
 ```sh
 polyqr_tikz "1mm" "rounded corners=0.25mm" "https://github.com/KurtBoehm/polyqr"
@@ -27,7 +37,7 @@ This prints a `tikzpicture` environment of the following form to `stdout`:
 ```
 
 Because each connected component is rendered as a single polygon, TikZ styles such as `rounded corners` apply only to the outer boundary of each contiguous region.
-This also eliminates visible gaps between modules, which you can see when comparing to a basic version that draws each module as a separate rectangle:
+This also eliminates visible gaps between modules, which can be seen when comparing to a basic version that draws each module as a separate rectangle (full-screen viewing is advised):
 
 | Basic                                                                                      | PolyQR                                                                                       | PolyQR with rounded corners                                                                                  |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -35,7 +45,7 @@ This also eliminates visible gaps between modules, which you can see when compar
 
 The LaTeX file used to generate these examples is at [`docs/tikz.tex`](https://github.com/KurtBoehm/polyqr/blob/main/docs/tikz.tex).
 
-You can also generate TikZ code directly from Python:
+TikZ code can also be generated directly from Python:
 
 ```python
 from polyqr import QrCodePainter
@@ -47,11 +57,11 @@ print(painter.tikz(size="1mm", style="rounded corners=0.25mm"))
 
 ## 🖼️ SVG Output
 
-PolyQR can also generate **highly minimized SVG paths**:
+PolyQR can also generate highly minimized SVG paths:
 
-- Either the entire QR code or each contiguous area becomes a single `<path>` element using `fill-rule="evenodd"` to handle holes.
+- The entire QR code (or each contiguous area) becomes a single `<path>` element using `fill-rule="evenodd"` to handle holes.
 - All segments are axis-aligned and therefore encoded using only `M`, `H`, `V`, and `Z` commands.
-- For every move/line, **absolute vs. relative** commands are chosen based on which textual form is shorter.
+- For every move/line, absolute vs. relative commands are chosen based on which textual form is shorter.
 
 SVG generation is available programmatically:
 
@@ -76,27 +86,27 @@ for path in painter.svg_paths:
 
 For the message `https://github.com/KurtBoehm/polyqr`:
 
-- `SvgPathImage` output: ≈ **6.4 kB** ([`docs/svg-qrcode.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-qrcode.svg))
-- `QrCodePainter.svg` output: ≈ **1.7 kB** ([`docs/svg-polyqr.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-polyqr.svg))
+- `SvgPathImage` output: ≈ 6.4 kB ([`docs/svg-qrcode.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-qrcode.svg))
+- `QrCodePainter.svg` output: ≈ 1.7 kB ([`docs/svg-polyqr.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-polyqr.svg))
 
-That is a **size reduction of more than 70%** with identical geometry.
+That is a size reduction of more than 70% with identical geometry.
 
 ## 🧠 Algorithm Overview
 
 PolyQR converts a message into merged polygons in three main stages:
 
 1. **QR code generation**:
-   - Uses [`qrcode`](https://pypi.org/project/qrcode/) to build a **Boolean module matrix** for the input message.
+   - Uses [`qrcode`](https://pypi.org/project/qrcode/) to build a Boolean module matrix for the input message.
 2. **Connected components and boundary extraction**:
-   - Runs a **4-neighbour BFS flood fill** on the module grid to find connected black regions.
+   - Runs a 4-neighbour BFS flood fill on the module grid to find connected black regions.
    - For each module in a component, its four unit-square edges are added to a `Counter` in canonical (sorted-endpoint) form.
-   - Any edge seen **exactly once** lies on the region’s boundary (outer boundary or hole); interior edges shared by two modules cancel out.
+   - Any edge seen exactly once lies on the region’s boundary (outer boundary or hole).
 3. **Cycle tracing and polygon simplification**:
    - Builds an undirected adjacency graph from the remaining boundary edges.
-   - For each connected component of this boundary graph, traces a **single “wall-hugging” cycle**:
-     - At each step, the walk prefers **non-collinear turns** over going straight, producing visually pleasing outlines around holes when rounded corners are used.
-     - If the initial cycle does not visit every vertex of the component, it is **iteratively extended** by following any remaining unused edges (again preferring turns) until the component is fully covered.
-   - Each resulting cycle is simplified by **removing collinear vertices**.
+   - For each connected component of this boundary graph, traces a single “wall-hugging” cycle:
+     - At each step, the walk prefers making a turn over going straight, producing visually pleasing outlines around holes when rounded corners are used.
+     - If the initial cycle does not visit every vertex of the component, it is iteratively extended by following any remaining unused edges (again preferring turns) until the component is fully covered.
+   - Each resulting cycle is simplified by removing collinear vertices.
 
 The result is a small set of rectilinear polygons that exactly cover the QR modules.
 
@@ -120,7 +130,7 @@ The TikZ tests are relatively slow, as they require `pdflatex` to compile a LaTe
 To keep test times reasonable, the `dev` dependencies include `pytest-xdist`, so tests can be executed in parallel:
 
 ```sh
-pytest --cov -n 8  # or any other number of workers
+pytest --cov -n auto  # or a fixed number of workers
 ```
 
 ## 📜 License

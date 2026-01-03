@@ -11,6 +11,15 @@ from typing import cast, final
 
 import qrcode
 
+__version__ = "1.0.0"
+
+__all__ = [
+    "Point",
+    "Edge",
+    "QrCodePainter",
+    "run_tikz",
+]
+
 # 2D integer grid point (row, column).
 Point = tuple[int, int]
 Edge = tuple[Point, Point]
@@ -301,7 +310,7 @@ class QrCodePainter:
 
 
 def run_tikz() -> None:
-    """CLI entry point that prints TikZ code for a QR code."""
+    """Command-line entry point that prints TikZ code for a QR code."""
     parser = ArgumentParser()
     parser.add_argument("size", help="Edge length of one QR code module")
     parser.add_argument("style", help="TikZ style options applied to each polygon")
