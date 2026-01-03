@@ -11,7 +11,6 @@ requires-python = ">=3.11"
 license = "MPL-2.0"
 license-files = ["License"]
 authors = [{ name = "Kurt Böhm", email = "kurbo96@gmail.com" }]
-dependencies = ["qrcode"]
 keywords = ["svg", "drawing", "vector", "tikz", "latex", "qr-code"]
 classifiers = [
   "Intended Audience :: Developers",
@@ -23,12 +22,13 @@ classifiers = [
   "Topic :: Multimedia :: Graphics",
   "Topic :: Text Processing :: Markup :: LaTeX",
 ]
+dependencies = ["qrcode"]
 
 [project.urls]
 Repository = "https://github.com/KurtBoehm/polyqr"
 
 [project.optional-dependencies]
-dev = ["numpy", "cairosvg", "pillow", "pytest", "PyMuPDF"]
+dev = ["numpy", "cairosvg", "pillow", "pytest", "pytest-cov", "pytest-xdist", "PyMuPDF"]
 
 [project.scripts]
 polyqr_tikz = "polyqr:run_tikz"

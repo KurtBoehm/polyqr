@@ -8,7 +8,7 @@ PolyQR can generate:
 - **TikZ** code with full styling support (e.g. rounded corners)
 - **SVG** paths that are fully minimized to save space
 
-The [`tests`](https://github.com/KurtBoehm/polyqr/blob/main/tests) directory contains **`pytest`-based tests** for both TikZ and SVG.
+The `pytest`-based **test suite** with **100% coverage** (for both TikZ and SVG) is defined in the [`tests` directory](https://github.com/KurtBoehm/polyqr/blob/main/tests).
 
 ## 🖼️ TikZ Output
 
@@ -102,24 +102,25 @@ The result is a small set of rectilinear polygons that exactly cover the QR modu
 
 ## 🧪 Testing
 
-PolyQR includes **pytest-based tests** for TikZ and SVG output, covering QR code generation, polygon extraction and simplification, and output formatting.
+PolyQR includes `pytest`-based tests that cover the entire code base with a 100% code coverage.
+
 The development dependencies can be installed via the `dev` optional group:
 
 ```sh
-pip3 install .[dev]
+pip install .[dev]
 ```
 
-All tests can then be run from the project root:
+All tests (including coverage reporting using `pytest-cov`) can then be run from the project root:
 
 ```sh
-pytest
+pytest --cov
 ```
 
 The TikZ tests are relatively slow, as they require `pdflatex` to compile a LaTeX document to PDF, which is then rasterized via PyMuPDF.
 To keep test times reasonable, the `dev` dependencies include `pytest-xdist`, so tests can be executed in parallel:
 
 ```sh
-pytest -n 8  # or any other number of workers
+pytest --cov -n 8  # or any other number of workers
 ```
 
 ## 📜 License
