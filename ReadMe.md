@@ -54,7 +54,7 @@ from polyqr import QrCodePainter
 
 painter = QrCodePainter("https://github.com/KurtBoehm/polyqr")
 
-print(painter.tikz(size="1mm", style="rounded corners=0.25mm"))
+print(painter.tikz(size="1mm", style="rounded corners=0.25mm", full_size=False))
 ```
 
 ## 🖼️ SVG Output
