@@ -231,7 +231,7 @@ class QrCodePainter:
 
                 self.point_chains.append(chains)
 
-    def tikz(self, *, size: str, style: str, full_size: bool) -> str:
+    def tikz(self, *, size: str, style: str, full_size: bool = False) -> str:
         """Return TikZ code that draws all polygons of the QR code."""
         lines = [
             f"\\begin{{tikzpicture}}[x={size},y={size},"
