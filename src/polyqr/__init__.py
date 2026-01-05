@@ -231,17 +231,19 @@ class QrCodePainter:
 
                 self.point_chains.append(chains)
 
-    def tikz(self, *, size: str, style: str) -> str:
+    def tikz(self, *, size: str, style: str, full_size: bool) -> str:
         """Return TikZ code that draws all polygons of the QR code."""
         lines = [
             f"\\begin{{tikzpicture}}[x={size},y={size},"
             + f"qrpoly/.style={{fill=black, draw=none, even odd rule, {style}}}]",
         ]
+        denom = 1 if full_size else self.n
 
         for chains in self.point_chains:
             # Each chain becomes a closed path.
             chain_str = " ".join(
-                " -- ".join(f"({c}, {-r})" for r, c in chain) + " -- cycle"
+                " -- ".join(f"({c / denom}, {-r / denom})" for r, c in chain)
+                + " -- cycle"
                 for chain in chains
             )
             lines.append(f"  \\draw[qrpoly] {chain_str};")
@@ -312,8 +314,15 @@ class QrCodePainter:
 def run_tikz() -> None:
     """Command-line entry point that prints TikZ code for a QR code."""
     parser = ArgumentParser()
+    parser.add_argument(
+        "--full-size",
+        help="Whether the size applies to one module (no --full-size) "
+        + "or to the full QR code (--full-size)",
+        action="store_true"
+    )
     parser.add_argument("size", help="Edge length of one QR code module")
     parser.add_argument("style", help="TikZ style options applied to each polygon")
     parser.add_argument("msg", help="Message to encode as a QR code")
     args = parser.parse_args()
-    print(QrCodePainter(args.msg).tikz(size=args.size, style=args.style))
+    painter = QrCodePainter(args.msg)
+    print(painter.tikz(size=args.size, style=args.style, full_size=args.full_size))

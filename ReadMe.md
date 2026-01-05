@@ -36,6 +36,8 @@ This prints a `tikzpicture` environment of the following form to `stdout`:
 \end{tikzpicture}
 ```
 
+If the optional argument `--full-size` is added, the size parameter (`1mm` in the previous example) does not specify the size of each module (as it does by default), but the size of the entire QR code.
+
 Because each connected component is rendered as a single polygon, TikZ styles such as `rounded corners` apply only to the outer boundary of each contiguous region.
 This also eliminates visible gaps between modules, which can be seen when comparing to a basic version that draws each module as a separate rectangle (full-screen viewing is advised):
 
