@@ -117,7 +117,7 @@ def test_qrcode_painter_tikz(msg: str, full_size: bool, tmp_path: Path) -> None:
     # Produce TikZ for the same message with an arbitrary module size.
     def make_tikz():
         painter = QrCodePainter(msg)
-        size = painter.n if full_size else 1
+        size = 1 if full_size else painter.n
         return painter.tikz(size=f"{unit_pt}pt", style="", full_size=full_size), size
 
     # Use the helper function
@@ -153,7 +153,7 @@ def test_run_tikz(msg: str, full_size: bool, tmp_path: Path) -> None:
         qr.add_data(msg)
         qr.make()
 
-        return f.getvalue(), qr.modules_count if full_size else 1
+        return f.getvalue(), 1 if full_size else qr.modules_count
 
     # Use the helper function
     _test_tikz(msg, make_tikz, tmp_path)

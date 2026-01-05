@@ -11,7 +11,7 @@ from typing import cast, final
 
 import qrcode
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 __all__ = [
     "Point",
@@ -237,7 +237,7 @@ class QrCodePainter:
             f"\\begin{{tikzpicture}}[x={size},y={size},"
             + f"qrpoly/.style={{fill=black, draw=none, even odd rule, {style}}}]",
         ]
-        denom = 1 if full_size else self.n
+        denom = self.n if full_size else 1
 
         for chains in self.point_chains:
             # Each chain becomes a closed path.
