@@ -27,7 +27,7 @@ def _svg_to_mask(svg_bytes: str, n: int):
         negate_colors=True,
     )
     assert isinstance(png_bytes, bytes)
-    return np.array(Image.open(io.BytesIO(png_bytes)).convert("1"), dtype=np.bool_).T
+    return np.array(Image.open(io.BytesIO(png_bytes)).convert("1"), dtype=np.bool_)
 
 
 def _test_svg(msg: str, make_svg: Callable[[QrCodePainter], str]) -> None:

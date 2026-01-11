@@ -7,11 +7,11 @@
 from argparse import ArgumentParser
 from collections import Counter, deque
 from collections.abc import Iterable
-from typing import cast, final
+from typing import Callable, cast, final
 
 import qrcode
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 __all__ = [
     "Point",
@@ -237,13 +237,14 @@ class QrCodePainter:
             f"\\begin{{tikzpicture}}[x={size},y={size},"
             + f"qrpoly/.style={{fill=black, draw=none, even odd rule, {style}}}]",
         ]
-        denom = self.n if full_size else 1
+        t: Callable[[int], int | float] = (
+            (lambda i: i / self.n) if full_size else (lambda i: i)
+        )
 
         for chains in self.point_chains:
             # Each chain becomes a closed path.
             chain_str = " ".join(
-                " -- ".join(f"({c / denom}, {-r / denom})" for r, c in chain)
-                + " -- cycle"
+                " -- ".join(f"({t(c)}, {-t(r)})" for r, c in chain) + " -- cycle"
                 for chain in chains
             )
             lines.append(f"  \\draw[qrpoly] {chain_str};")
@@ -260,11 +261,11 @@ class QrCodePainter:
         """
 
         def move(p: Point | None, q: Point) -> str:
-            ax, ay = q
-            abs_cmd = f"M{ax} {ay}"
+            qr, qc = q
+            abs_cmd = f"M{qc} {qr}"
             if p is None:
                 return abs_cmd
-            rel_cmd = f"m{ax - p[0]} {ay - p[1]}"
+            rel_cmd = f"m{qc - p[1]} {qr - p[0]}"
             return abs_cmd if len(abs_cmd) <= len(rel_cmd) else rel_cmd
 
         def line(axis: str, src: int, dst: int) -> str:
@@ -279,13 +280,13 @@ class QrCodePainter:
                 # Each chain becomes a closed path.
                 p0 = chain[0]
                 parts.append(move(prev, p0))
-                x, y = p0
+                r, c = p0
 
-                for nx, ny in chain[1:]:
-                    dx, dy = nx - x, ny - y
-                    assert dx == 0 or dy == 0, f"{dx} {dy}"
-                    parts.append(line("h", x, nx) if dy == 0 else line("v", y, ny))
-                    x, y = nx, ny
+                for nr, nc in chain[1:]:
+                    dr, dc = nr - r, nc - c
+                    assert dr == 0 or dc == 0, f"{dr} {dc}"
+                    parts.append(line("h", c, nc) if dr == 0 else line("v", r, nr))
+                    r, c = nr, nc
 
                 parts.append("z")
                 if relative:
@@ -318,7 +319,7 @@ def run_tikz() -> None:
         "--full-size",
         help="Whether the size applies to one module (no --full-size) "
         + "or to the full QR code (--full-size)",
-        action="store_true"
+        action="store_true",
     )
     parser.add_argument("size", help="Edge length of one QR code module")
     parser.add_argument("style", help="TikZ style options applied to each polygon")
