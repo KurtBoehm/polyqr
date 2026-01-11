@@ -1,20 +1,20 @@
 # 🧩 PolyQR: QR Codes as Polygons
 
-PolyQR is a small library that turns a message into a QR code where each contiguous black region is drawn as **one merged polygon**, not a grid of tiny squares.
-This **eliminates hideous hairline gaps** between modules that appear with naive approaches (an example is shown later) and also **minimizes the number of points per polygon** to keep the output compact.
+PolyQR turns a message into a QR code where each contiguous black region is drawn as **one merged polygon**, not as a grid of tiny squares.
+This **eliminates hideous hairline gaps** between modules that appear with naive approaches (example below) and **minimizes the number of points per polygon** to keep the output compact.
 
 PolyQR can generate:
 
 - **TikZ** code with full styling support (e.g. rounded corners)
-- **SVG** paths that are fully minimized to save space
+- **SVG** paths that are aggressively minimized to save space
 
-The `pytest`-based **test suite** with **100% coverage** (for both TikZ and SVG) is defined in the [`tests` directory](https://github.com/KurtBoehm/polyqr/blob/main/tests).
+The `pytest`-based **test suite** with **100% coverage** (for both TikZ and SVG) lives in the [`tests` directory](https://github.com/KurtBoehm/polyqr/blob/main/tests).
 
 [![Tests with 100% coverage](https://github.com/KurtBoehm/polyqr/actions/workflows/test.yml/badge.svg)](https://github.com/KurtBoehm/polyqr/actions/workflows/test.yml)
 
 ## 📦 Installation
 
-This package is available on PyPI and can be installed with `pip`:
+PolyQR is available [on PyPI](https://pypi.org/project/polyqr/) and can be installed with `pip`:
 
 ```sh
 pip install polyqr
@@ -22,7 +22,7 @@ pip install polyqr
 
 ## 🖼️ TikZ Output
 
-PolyQR provides the command-line tool `polyqr_tikz`, which can be called as follows:
+PolyQR provides the command-line tool `polyqr_tikz`:
 
 ```sh
 polyqr_tikz "1mm" "rounded corners=0.25mm" "https://github.com/KurtBoehm/polyqr"
@@ -36,16 +36,16 @@ This prints a `tikzpicture` environment of the following form to `stdout`:
 \end{tikzpicture}
 ```
 
-If the optional argument `--full-size` is added, the size parameter (`1mm` in the previous example) does not specify the size of each module (as it does by default), but the size of the entire QR code.
+If the optional flag `--full-size` is supplied, the size argument (`1mm` above) specifies the size of the entire QR code rather than the size of each module.
 
 Because each connected component is rendered as a single polygon, TikZ styles such as `rounded corners` apply only to the outer boundary of each contiguous region.
-This also eliminates visible gaps between modules, which can be seen when comparing to a basic version that draws each module as a separate rectangle (full-screen viewing is advised):
+This also removes visible gaps between modules, which are apparent when each module is drawn as a separate square (view full-screen):
 
-| Basic                                                                                      | PolyQR                                                                                       | PolyQR with rounded corners                                                                                  |
+| Separate squares                                                                           | PolyQR                                                                                       | PolyQR with rounded corners                                                                                  |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | ![Basic TikZ](https://raw.githubusercontent.com/KurtBoehm/polyqr/main/docs/tikz-basic.png) | ![PolyQR TikZ](https://raw.githubusercontent.com/KurtBoehm/polyqr/main/docs/tikz-polyqr.png) | ![Rounded PolyQR TikZ](https://raw.githubusercontent.com/KurtBoehm/polyqr/main/docs/tikz-polyqr-rounded.png) |
 
-The LaTeX file used to generate these examples is at [`docs/tikz.tex`](https://github.com/KurtBoehm/polyqr/blob/main/docs/tikz.tex).
+The LaTeX source used to generate these examples is in [`docs/tikz.tex`](https://github.com/KurtBoehm/polyqr/blob/main/docs/tikz.tex).
 
 TikZ code can also be generated directly from Python:
 
@@ -59,11 +59,11 @@ print(painter.tikz(size="1mm", style="rounded corners=0.25mm", full_size=False))
 
 ## 🖼️ SVG Output
 
-PolyQR can also generate highly minimized SVG paths:
+PolyQR can also generate very compact SVG paths:
 
-- The entire QR code (or each contiguous area) becomes a single `<path>` element using `fill-rule="evenodd"` to handle holes.
-- All segments are axis-aligned and therefore encoded using only `M`, `H`, `V`, and `Z` commands.
-- For every move/line, absolute vs. relative commands are chosen based on which textual form is shorter.
+- The entire QR code (or each contiguous area) becomes a single `<path>` using `fill-rule="evenodd"` to handle holes.
+- All segments are axis-aligned and encoded using only `M`, `H`, `V`, and `Z`.
+- For every move/line, absolute vs. relative commands are chosen to minimize text length.
 
 SVG generation is available programmatically:
 
@@ -84,14 +84,14 @@ for path in painter.svg_paths:
 ```
 
 [`qrcode`](https://pypi.org/project/qrcode/), which PolyQR uses to generate the underlying module matrix, can also output SVG via `qrcode.svg.SvgPathImage` (among others).
-`SvgPathImage` avoids gaps by collecting all modules into a single `<path>`, but its output is much larger.
+`SvgPathImage` avoids gaps by merging all modules into a single `<path>`, but the resulting SVG is much larger.
 
 For the message `https://github.com/KurtBoehm/polyqr`:
 
 - `SvgPathImage` output: ≈ 6.4 kB ([`docs/svg-qrcode.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-qrcode.svg))
 - `QrCodePainter.svg` output: ≈ 1.6 kB ([`docs/svg-polyqr.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-polyqr.svg))
 
-That is a size reduction of 75% with identical geometry.
+That is a 75% reduction with identical geometry.
 
 ## 🧠 Algorithm Overview
 
@@ -102,11 +102,11 @@ PolyQR converts a message into merged polygons in three main stages:
 2. **Connected components and boundary extraction**:
    - Runs a 4-neighbour BFS flood fill on the module grid to find connected black regions.
    - For each module in a component, its four unit-square edges are added to a `Counter` in canonical (sorted-endpoint) form.
-   - Any edge seen exactly once lies on the region’s boundary (outer boundary or hole).
+   - Any edge seen exactly once lies on the region’s boundary (either an outer boundary or a hole).
 3. **Cycle tracing and polygon simplification**:
    - Builds an undirected adjacency graph from the remaining boundary edges.
    - For each connected component of this boundary graph, traces a single “wall-hugging” cycle:
-     - At each step, the walk prefers making a turn over going straight, producing visually pleasing outlines around holes when rounded corners are used.
+     - At each step, the walk prefers turning over going straight, which yields visually pleasing outlines around holes when rounded corners are used.
      - If the initial cycle does not visit every vertex of the component, it is iteratively extended by following any remaining unused edges (again preferring turns) until the component is fully covered.
    - Each resulting cycle is simplified by removing collinear vertices.
 
@@ -114,22 +114,22 @@ The result is a small set of rectilinear polygons that exactly cover the QR modu
 
 ## 🧪 Testing
 
-PolyQR includes `pytest`-based tests that cover the entire code base with a 100% code coverage.
+PolyQR includes `pytest`-based tests that cover the entire code base with 100% code coverage.
 
-The development dependencies can be installed via the `dev` optional group:
+Development dependencies can be installed via the `dev` extra:
 
 ```sh
 pip install .[dev]
 ```
 
-All tests (including coverage reporting using `pytest-cov`) can then be run from the project root:
+All tests (including coverage reporting via `pytest-cov`) can then be run from the project root:
 
 ```sh
 pytest --cov
 ```
 
-The TikZ tests are relatively slow, as they require `pdflatex` to compile a LaTeX document to PDF, which is then rasterized via PyMuPDF.
-To keep test times reasonable, the `dev` dependencies include `pytest-xdist`, so tests can be executed in parallel:
+The TikZ tests are relatively slow, as they require `pdflatex` to compile a LaTeX document to PDF, which is then rasterized using PyMuPDF.
+To keep test times reasonable, the `dev` dependencies include `pytest-xdist`, so tests can be run in parallel:
 
 ```sh
 pytest --cov -n auto  # or a fixed number of workers
@@ -137,4 +137,4 @@ pytest --cov -n auto  # or a fixed number of workers
 
 ## 📜 License
 
-This library is licensed under the terms of the Mozilla Public License 2.0, provided in [`License`](https://github.com/KurtBoehm/polyqr/blob/main/License).
+This library is licensed under the Mozilla Public License 2.0, provided in [`License`](https://github.com/KurtBoehm/polyqr/blob/main/License).
