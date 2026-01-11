@@ -89,9 +89,9 @@ for path in painter.svg_paths:
 For the message `https://github.com/KurtBoehm/polyqr`:
 
 - `SvgPathImage` output: ≈ 6.4 kB ([`docs/svg-qrcode.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-qrcode.svg))
-- `QrCodePainter.svg` output: ≈ 1.7 kB ([`docs/svg-polyqr.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-polyqr.svg))
+- `QrCodePainter.svg` output: ≈ 1.6 kB ([`docs/svg-polyqr.svg`](https://github.com/KurtBoehm/polyqr/blob/main/docs/svg-polyqr.svg))
 
-That is a size reduction of more than 70% with identical geometry.
+That is a size reduction of 75% with identical geometry.
 
 ## 🧠 Algorithm Overview
 
